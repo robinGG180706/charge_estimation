@@ -9,10 +9,10 @@ close all;
 
 
 % Base url (STRING)
-url_base = 'http://ec2-51-20-83-40.eu-north-1.compute.amazonaws.com';
+url_base = 'http://72.60.84.102:8080/';
 % Your team number (INTEGER) and password (STRING)
-team_number = 99;
-pwd = '99';
+team_number = 16;
+pwd = 'E7F8A9B0';
 
 
 % Dataset number (INTEGER). Allowed values are: 1, 2, or 3.
@@ -58,6 +58,31 @@ charge_estimate_vector = [-1];
 
 % The first sample index is 0, the last index is what reported here above.
 
+% Parameter
+% =============================================================
+
+Ts = 2.0/3600;         % Abtastzeit [h]
+tau = 60;              % RC-Zeitkonstante [s]
+R0  = 0.08v;            % ohmscher Widerstand
+R1  = 0.02;            % RC-Widerstand
+
+% Diskrete Modellierung
+a = exp(-Ts/tau);          % Diskreter a-Parameter
+b = R1 * (1 - a);          % Diskreter b-Parameter
+% ============================================================
+% Luenberger Observer Setup
+% =============================================================
+
+% Zustände: x = [SOC; Vrc]
+x_hat = zeros(2,1);
+
+% Beobachter-Gain L
+L1 = 1e-3;        % kleiner SOC-Gain
+lambda_RC = 0.95; % gewünschter RC-Pole
+L2 = lambda_RC - a;
+
+L = [L1; L2];
+
 
 for sample_index=1:405
     % Compose appropriate endpoint
@@ -72,20 +97,39 @@ for sample_index=1:405
 
     fprintf('Sample number %d requested OK.\n', sample_index);
 
-
     % Extract the current and voltage measurements delivered by the endpoint
     voltage_value = data.voltage;
     current_value = data.current;
+
+    if(sample_index==1)
+        x_hat(1) = voltage_to_charge(voltage_value);
+
+    end
 
     % and append them to a vector to keep an history
     voltage_vector = vertcat(voltage_vector, data.voltage);
     current_vector = vertcat(current_vector, data.current);
 
+    % --- Messfehler / Innovation ---
+    V_est = charge_to_voltage(x_hat(1)) + R0*current_value - x_hat(2);
+    e = voltage_value - V_est;
+
+    % --- Zustandspdate ---
+    SOC_next = x_hat(1) + Ts*current_value + L(1)*e;
+    Vrc_next = a*x_hat(2) - b*current_value + L(2)*e;
+
+    % --- Speichern + begrenzen ---
+    x_hat(1) = SOC_next;
+    x_hat(2) = Vrc_next;
+
+    % SOC_est(k) = x_hat(1);
+    Vrc_est(sample_index) = Vrc_next;
+    
 
     % ----
     % TODO Computation of the charge estimate. Your show, now.
     % ----
-    charge_estimate = randn(1,1);
+    charge_estimate = SOC_next;
 
     % --- End of Computation of the charge estimate
 
