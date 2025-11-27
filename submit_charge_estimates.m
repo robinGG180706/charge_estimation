@@ -63,7 +63,7 @@ charge_estimate_vector = [-1];
 
 Ts = 2.0/3600;         % Abtastzeit [h]
 tau = 60;              % RC-Zeitkonstante [s]
-R0  = 0.08v;            % ohmscher Widerstand
+R0  = 0.08;            % ohmscher Widerstand
 R1  = 0.02;            % RC-Widerstand
 
 % Diskrete Modellierung
