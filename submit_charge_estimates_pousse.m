@@ -179,7 +179,7 @@ for sample_index=1:N
     % --- RLS Regression: y = OCV(SOC_pred) - V_meas = phi' * theta + eps
     % phi = [ I[k]; Vrc_est_prev; I[k-1] ]
     phi = [ current_value; Vrc_prev; current_vector(max(1,sample_index-1)) ];
-    y = charge_to_voltage(Chg_pred) - voltage_value;
+    y = voltage_to_charge(Chg_pred) - voltage_value;
     
     % RLS Gain
     denom = lambda + phi' * (P * phi);
@@ -198,7 +198,7 @@ for sample_index=1:N
     
     % --- Luenberger Observer: Messinnovation e = V_meas - V_est
     R0_hat = theta_hat(1);
-    V_est_k = charge_to_voltage(x_hat(1)) + R0_hat * current_value - x_hat(2);
+    V_est_k = voltage_to_charge(x_hat(1)) + R0_hat * current_value - x_hat(2);
     e = voltage_value - V_est_k;
     
     % Zustandsupdate (diskret)

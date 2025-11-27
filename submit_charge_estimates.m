@@ -63,7 +63,7 @@ charge_estimate_vector = [-1];
 
 Ts = 2.0/3600;         % Abtastzeit [h]
 tau = 60;              % RC-Zeitkonstante [s]
-R0  = 0.08v;            % ohmscher Widerstand
+R0  = 0.08;            % ohmscher Widerstand
 R1  = 0.02;            % RC-Widerstand
 
 % Diskrete Modellierung
@@ -103,7 +103,6 @@ for sample_index=1:405
 
     if(sample_index==1)
         x_hat(1) = voltage_to_charge(voltage_value);
-
     end
 
     % and append them to a vector to keep an history
@@ -111,7 +110,7 @@ for sample_index=1:405
     current_vector = vertcat(current_vector, data.current);
 
     % --- Messfehler / Innovation ---
-    V_est = charge_to_voltage(x_hat(1)) + R0*current_value - x_hat(2);
+    V_est = voltage_to_charge(x_hat(1)) + R0*current_value - x_hat(2);
     e = voltage_value - V_est;
 
     % --- Zustandspdate ---
