@@ -50,7 +50,8 @@ current_vector = [];
 voltage_vector = [];
 % Charge estimate vector
 charge_estimate_vector = [-1];
-
+error_vector = [];
+voltage_estimator_vector = [];
 % Number of samples per dataset
 % Dataset 1: 405 available samples.
 % Dataset 2: 661 available samples.
@@ -62,9 +63,9 @@ charge_estimate_vector = [-1];
 % =============================================================
 
 Ts = 2.0/3600;         % Abtastzeit [h]
-tau = 60;              % RC-Zeitkonstante [s]
-R0  = 0.08;            % ohmscher Widerstand
-R1  = 0.02;            % RC-Widerstand
+tau = 5.223e4;              % RC-Zeitkonstante [s]
+R0  = 0.0874;            % ohmscher Widerstand
+R1  = 4.4;            % RC-Widerstand
 
 % Diskrete Modellierung
 a = exp(-Ts/tau);          % Diskreter a-Parameter
@@ -78,8 +79,9 @@ x_hat = zeros(2,1);
 
 % Beobachter-Gain L
 L1 = 1e-3;        % kleiner SOC-Gain
-lambda_RC = 0.95; % gewünschter RC-Pole
+lambda_RC = 0.9; % gewünschter RC-Pole
 L2 = lambda_RC - a;
+
 
 L = [L1; L2];
 
@@ -110,9 +112,16 @@ for sample_index=1:405
     current_vector = vertcat(current_vector, data.current);
 
     % --- Messfehler / Innovation ---
-    V_est = voltage_to_charge(x_hat(1)) + R0*current_value - x_hat(2);
+    V_est = charge_to_voltage(x_hat(1)) + R0*current_value - x_hat(2);
+    % if(sample_index==1)
+    %     V_est = V_est_new;
+    % end
+    % if (V_est_new - V_est > 0.05)
+    %     V_est = V_est_new;
+    % end
     e = voltage_value - V_est;
-
+    error_vector = vertcat(error_vector, e);
+    voltage_estimator_vector = vertcat(voltage_estimator_vector, V_est);
     % --- Zustandspdate ---
     SOC_next = x_hat(1) + Ts*current_value + L(1)*e;
     Vrc_next = a*x_hat(2) - b*current_value + L(2)*e;
@@ -144,20 +153,36 @@ end
 Ts = 2;
 time_vector = (1:numel(voltage_vector))' * Ts;
 
-subplot(3, 1, 1)
+subplot(4, 1, 1)
 plot(time_vector, voltage_vector)
+hold on
+plot(time_vector, voltage_estimator_vector, '-r')
+hold off
 xlabel('Time [seconds]')
 ylabel('Voltage [V]')
 
-subplot(3, 1, 2)
+subplot(4, 1, 2)
 plot(time_vector, current_vector)
 xlabel('Time [seconds]')
-ylabel('Current [V]')
+ylabel('Current [A]')
 
 
-subplot(3, 1, 3)
+subplot(4, 1, 3)
 plot(time_vector, charge_estimate_vector(2:end))
 xlabel('Time [seconds]')
 ylabel('Charge level [Ah]')
+
+% Delete avant de rendre
+
+subplot(4, 1, 4)
+plot(time_vector, error_vector)
+hold on
+yline(0, 'r');
+hold off
+xlabel('Time [seconds]')
+ylabel('error')
+
+error_1 = (charge_estimate_vector(end)-voltage_to_charge(voltage_vector(end)-R0*current_vector(end)+x_hat(2)))*1000;
+fprintf("Fin : Erreur entre le modèle et l'estimation : %.2f mAh \n", error_1);
 
 
